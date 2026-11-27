@@ -1,5 +1,7 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+const fs = require('fs');
+const path = require('path');
 const app = express();
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -8,9 +10,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(express.json());
 
-// 前端页面
+// 首页，改用fs读取，避开__dirname坑
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+  const htmlPath = path.join(__dirname, 'index.html');
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  res.send(html);
 });
 
 // 获取任务（倒序）
@@ -54,5 +58,5 @@ app.delete('/api/tasks/:id', async (req, res) => {
   res.json({ error });
 });
 
-// ✅ 关键！不要 listen！直接导出app
+// 导出，不要listen
 module.exports = app;
