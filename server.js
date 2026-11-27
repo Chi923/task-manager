@@ -55,3 +55,16 @@ app.delete('/api/tasks/:id', async (req, res) => {
 app.listen(port, () => {
   console.log(`服务启动：http://localhost:${port}`);
 });
+// 放在所有路由前面
+const express = require('express')
+const app = express()
+const path = require('path')
+
+// 静态资源
+app.use(express.static(path.join(__dirname, './')))
+
+// 根路由返回 index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'))
+})
+
