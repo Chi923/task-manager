@@ -1,62 +1,55 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const fs = require('fs');
-const path = require('path');
-const app = express();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const app = express();
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(express.static('.'));
 
-// 首页，改用fs读取，避开__dirname坑
-app.get('/', (req, res) => {
-  const htmlPath = path.join(__dirname, 'index.html');
-  const html = fs.readFileSync(htmlPath, 'utf8');
-  res.send(html);
-});
+// 优先读取Vercel环境变量，本地兜底
+const supabaseUrl = process.env.SUPABASE_URL || "https://prllhhmnirmnhmtojiob.supabase.co";
+const supabaseKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_t9WG0KX63N99pqV7iRPZzw_Z3aa8uaz";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// 获取任务（倒序）
+// 获取任务，支持优先级筛选，创建时间倒序
 app.get('/api/tasks', async (req, res) => {
-  const { data, error } = await supabase
-    .from('tasks')
-    .select('*')
-    .order('created_at', { ascending: false });
-  res.json({ data, error });
+  const { filter } = req.query;
+  let query = supabase.from('tasks').select('*').order('created_at', { ascending: false });
+  if (filter && filter !== '全部') {
+    query = query.eq('priority', filter);
+  }
+  const { data, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 // 添加任务
 app.post('/api/tasks', async (req, res) => {
   const { title, priority } = req.body;
-  const { data, error } = await supabase
-    .from('tasks')
-    .insert([{ title, priority }])
-    .select();
-  res.json({ data, error });
+  if (!title || !priority) return res.status(400).json({ error: '任务标题和优先级不能为空' });
+  const { data, error } = await supabase.from('tasks').insert([{ title, priority, is_done: false }]).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
 });
 
 // 切换完成状态
 app.patch('/api/tasks/:id', async (req, res) => {
   const { id } = req.params;
-  const { completed } = req.body;
-  const { data, error } = await supabase
-    .from('tasks')
-    .update({ completed })
-    .eq('id', id)
-    .select();
-  res.json({ data, error });
+  const { is_done } = req.body;
+  const { data, error } = await supabase.from('tasks').update({ is_done }).eq('id', id).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data[0]);
 });
 
 // 删除任务
 app.delete('/api/tasks/:id', async (req, res) => {
   const { id } = req.params;
-  const { error } = await supabase
-    .from('tasks')
-    .delete()
-    .eq('id', id);
-  res.json({ error });
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
 });
 
-// 导出，不要listen
-module.exports = app;
+app.listen(port, () => {
+  console.log(`服务启动：http://localhost:${port}`);
+});
