@@ -1,6 +1,5 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-require('dotenv').config();
 
 const app = express();
 const port = 3000;
@@ -8,8 +7,9 @@ const port = 3000;
 app.use(express.json());
 app.use(express.static('.'));
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY;
+// 直接写在这里，不需要.env
+const supabaseUrl = "https://prllhhmnirmnhmtojiob.supabase.co";
+const supabaseKey = "sb_publishable_t9WG0KX63N99pqV7iRPZzw_Z3aa8uaz";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 获取任务列表，支持筛选
